@@ -109,7 +109,7 @@ class AwsS3Form extends require( "mpbasic" )()
 
 		if  options.contentDisposition?
 			_cDisposition = options.contentDisposition
-		else if options.contentDisposition
+		else
 			_cDisposition = "attachment"
 
 
