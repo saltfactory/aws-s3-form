@@ -10,7 +10,7 @@
 .idea
 
 *.mo
-*.js
+#*.js
 *.sublime*
 config.json
 config*.json

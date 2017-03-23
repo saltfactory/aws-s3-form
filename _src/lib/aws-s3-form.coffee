@@ -6,7 +6,7 @@
 # ### Exports: *Class*
 #
 # Generate a signed and reday to use formdata to put files to s3 directly from teh browser. Signing is done by using AWS Signature Version 4.
-# 
+#
 
 # **npm modules**
 uuid = require('node-uuid')
@@ -60,12 +60,12 @@ class AwsS3Form extends require( "mpbasic" )()
 			useUuid: true
 			# **AwsS3Form.cryptoModule** *String( enum: crypto|crypto-js)* You can switch between the node internal crypo-module or the browser module [cryptojs](https://www.npmjs.com/package/crypto-js)
 			cryptoModule: "crypto"
-		
+
 	###
 	## initialize
-	
+
 	`basic.initialize()`
-	
+
 	initialize the module and set the crypto adapter
 
 	@api private
@@ -74,14 +74,14 @@ class AwsS3Form extends require( "mpbasic" )()
 		@_setCryptoModule( @config.cryptoModule )
 		return
 
-		
+
 	###
 	## create
-	
+
 	`basic.create( filename [, options ] )`
-	
+
 	create a new form object
-	
+
 	@param { String } filename The S3 file key/filename to use.
 	@param { Object } [options] Create options
 	@param { String } [options.acl] Option to overwrite the general `acl`
@@ -91,7 +91,8 @@ class AwsS3Form extends require( "mpbasic" )()
 	@param { String } [options.redirectUrlTemplate] Option to overwrite the general `redirectUrlTemplate`
 	@param { String } [options.successActionStatus] Option to overwrite the general `successActionStatus`
 	@param { Number|Date } [options.policyExpiration] Option to overwrite the general `policyExpiration`
-	
+	@param { String } [options.contentDisposition] Option to set the content disposition of the upload file
+
 	@api public
 	###
 	create: ( filename, options = {} )=>
@@ -100,17 +101,24 @@ class AwsS3Form extends require( "mpbasic" )()
 		options.now = new Date()
 		if @config.useUuid
 			options.uuid = uuid.v4()
-		
+
 		if  options.contentType? and _isString( options.contentType )
 			_cType = options.contentType
 		else if options.contentType
 			_cType = mime.lookup( filename )
-		
+
+		if  options.contentDisposition?
+			_cDisposition = options.contentDisposition
+		else if options.contentDisposition
+			_cDisposition = "attachment"
+
+
 		_data =
 			acl: @_acl( options.acl )
 			credential: @_createCredential( options.now )
 			amzdate: @_shortDate( options.now )
 			contentType: _cType
+			contentDisposition: _cDisposition
 
 		if options.redirectUrlTemplate?
 			_data.success_action_redirect = @_redirectUrl( options.redirectUrlTemplate, filename: filename )
@@ -147,19 +155,22 @@ class AwsS3Form extends require( "mpbasic" )()
 
 		if options.uuid?
 			data.fields[ "x-amz-meta-uuid" ] = options.uuid
-		
+
 		if _cType?
 			data.fields[ "Content-Type" ] = _cType
+
+		if _cDisposition?
+			data.fields["Content-Disposition"] = _cDisposition
 
 		return data
 
 	###
 	## policy
-	
+
 	`basic.policy( filename [, options ] )`
-	
+
 	Create a new policy object based on AWS Signature Version 4.
-	
+
 	@param { String } filename The S3 file key/filename to use.
 	@param { Object } [options] Policy options
 	@param { String } [options.now] The current date-time for this policy
@@ -169,7 +180,7 @@ class AwsS3Form extends require( "mpbasic" )()
 	@param { Array } [options.customConditions] Option to set s3 upload conditions. For details see http://docs.aws.amazon.com/AmazonS3/latest/API/sigv4-HTTPPOSTConstructPolicy.html
 	@param { String } [options.redirectUrlTemplate] Option to overwrite the general `redirectUrlTemplate`
 	@param { Number|Date } [options.policyExpiration] Option to overwrite the general `policyExpiration`
-	
+
 	@api public
 	###
 	policy: ( filename, options = {}, _predef = {} )=>
@@ -192,17 +203,23 @@ class AwsS3Form extends require( "mpbasic" )()
 			policy.conditions.push { "success_action_status": _predef.success_action_status.toString()}
 		else
 			policy.conditions.push { "success_action_redirect": _predef.success_action_redirect or @_redirectUrl( options.redirectUrlTemplate, filename: filename ) }
-		
+
 		_ctypeCondition = false
 		if options.customConditions?
 			for ccond in options.customConditions
 				policy.conditions.push ccond
 				if ( _isArray( ccond ) and _isString( ccond[ 1 ] ) and ccond[ 1 ].toLowerCase() is "$content-type" ) or ( _isObject( ccond ) and ccond["content-type"]? )
 					_ctypeCondition = true
-		
+				if ( _isArray( ccond ) and _isString( ccond[ 1 ] ) and ccond[ 1 ].toLowerCase() is "$content-disposition" ) or ( _isObject( ccond ) and ccond["content-disposition"]? )
+					_ctypeCondition = true
+
 		if not _ctypeCondition and _predef?.contentType?
 			policy.conditions.push { "content-type": _predef.contentType }
-			
+
+		if not _ctypeCondition and _predef?.contentDisposition?
+			policy.conditions.push { "content-disposition": _predef.contentDisposition }
+
+
 		@debug "generated policy", policy
 		if options.uuid?
 			policy.conditions.push { "x-amz-meta-uuid": options.uuid }
@@ -211,18 +228,18 @@ class AwsS3Form extends require( "mpbasic" )()
 
 	###
 	## sign
-	
+
 	`basic.sign( policyB64 [, options ] )`
-	
+
 	Create a AWS Signature Version 4. This is used to create the signature out of the policy.
-	
+
 	@param { String } policyB64 Base64 encoded policy
 	@param { Object } [options] sign options
 	@param { String } [options.now=`new Date()`] The current date-time for this signature
 	@param { String } [options.signdate=converted `options.now`] signature date
-	@param { String } [options.secretAccessKey] Change the configured standard `secretAccessKey` type. 
+	@param { String } [options.secretAccessKey] Change the configured standard `secretAccessKey` type.
 	@param { String } [options.region] Option to overwrite the general `region`
-	
+
 	@api public
 	###
 	sign: ( policyB64, options )=>
@@ -238,40 +255,40 @@ class AwsS3Form extends require( "mpbasic" )()
 
 	###
 	## _acl
-	
+
 	`AwsS3Form._acl( [acl] )`
-	
+
 	validate the given acl or get the default
-	
+
 	@param { String } [acl=`config.acl`] the S3 acl
-	
-	@return { String } A valid acl 
-	
+
+	@return { String } A valid acl
+
 	@api private
 	###
 	_acl: ( acl = @config.acl )=>
 		if acl not in @validation.acl
 			return @_handleError( null, "EINVALIDACL", val: acl )
 		return acl
-	
+
 	###
 	## _redirectUrl
-	
+
 	`AwsS3Form._redirectUrl( tmpl, data )`
-	
+
 	Get the default redirect template or process the given sting as lodash template or call teh given function
-	
+
 	@param { String|Function } tmpl A lodash template or function to generate the redirect url. If `null` general `redirectUrlTemplate` will be used.
 	@param { Object } data The data object for template or function args. Usual example: `{ "filename": "the-filename-from-create-or-policy.jpg" }`
 
-	@return { String } A redirect url 
-	
+	@return { String } A redirect url
+
 	@api private
 	###
 	_redirectUrl: ( tmpl = @config.redirectUrlTemplate, data = {} )=>
 		if not tmpl?
 			return @_handleError( null, "ENOREDIR" )
-		
+
 		if _isString( tmpl )
 			return _template( tmpl )( data )
 		else if _isFunction( tmpl )
@@ -299,22 +316,22 @@ class AwsS3Form extends require( "mpbasic" )()
 
 	###
 	## _calcDate
-	
+
 	`AwsS3Form._calcDate( addSec [, date] )`
-	
+
 	Calculate and validate a date
-	
+
 	@param { Number|Date } addSec A date to convert or a number in seconds to add to the date out of the `date` arg.
 	@param { Date } [date=`new Date()`] A base date for adding if the first argument `addSec` is a number.
-	
-	@return { String } A date ISO String 
-	
+
+	@return { String } A date ISO String
+
 	@api private
 	###
 	_calcDate: ( addSec, date = new Date() )=>
 		_msAdd = 0
 		_now = Date.now()
-		
+
 		if _isNumber( addSec )
 			_msAdd = addSec * 1000
 			if _isDate( date )
@@ -331,20 +348,20 @@ class AwsS3Form extends require( "mpbasic" )()
 		# use a 10s time space to the past to check the date
 		if ( _now - 10000 ) > _ts
 			return @_handleError( null, "EOLDDATE", val: _now )
-		
+
 		return ( new Date( _ts + _msAdd ) ).toISOString()
 
 	###
 	## _createCredential
-	
+
 	`AwsS3Form._createCredential( date )`
-	
+
 	Generate a AWS Signature Version 4 conform credential string
-	
-	@param { Date } date the credential date 
-	
-	@return { String } a valid AWS Signature Version 4 credential string 
-	
+
+	@param { Date } date the credential date
+
+	@return { String } a valid AWS Signature Version 4 credential string
+
 	@api private
 	###
 	_createCredential: ( date )=>
@@ -353,16 +370,16 @@ class AwsS3Form extends require( "mpbasic" )()
 
 	###
 	## _shortDate
-	
+
 	`AwsS3Form._shortDate( [date] [, onlyDate] )`
-	
+
 	Create a AWS valid date string
-	
-	@param { Date } [date=`new Date()`] The date to process 
+
+	@param { Date } [date=`new Date()`] The date to process
 	@param { Boolean } [onlyDate=false] Return only the date and cut the time
-	
+
 	@return { String } a AWS valid date string
-	
+
 	@api private
 	###
 	_shortDate: ( date = new Date(), onlyDate = false )->
@@ -373,34 +390,34 @@ class AwsS3Form extends require( "mpbasic" )()
 
 	###
 	## _setCryptoModule
-	
+
 	`AwsS3Form._setCryptoModule( cryptoModule )`
-	
+
 	Define the crypto module type
-	
-	@param { String } cryptoModule The secret module to require. ( Enum: `crypto`, `crypto-js` ) 
-	
+
+	@param { String } cryptoModule The secret module to require. ( Enum: `crypto`, `crypto-js` )
+
 	@api private
 	###
 	_setCryptoModule: ( cryptoModule = @config.cryptoModule )=>
 		if cryptoModule not in @validation.cryptoModules
 			@_handleError( null, "EINVALIDCRYPTOMODULE", val: cryptoModule )
 			return
-						
+
 		cryptoAdapter.setModule( cryptoModule )
 		return
 
 	###
 	## _obj2b64
-	
+
 	`AwsS3Form._obj2b64( obj )`
-	
+
 	Srtingify a object and return it base64 encoded. Used to convert the policy result to the base64 string required by the `.sign()` method.
-	
-	@param { Object } obj A object to stringify 
-	
-	@return { String } Base64 encoded JSON 
-	
+
+	@param { Object } obj A object to stringify
+
+	@return { String } Base64 encoded JSON
+
 	@api private
 	###
 	_obj2b64: ( obj )->
