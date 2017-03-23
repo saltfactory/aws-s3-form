@@ -120,7 +120,7 @@ class AwsS3Form extends require( "mpbasic" )()
 			amzdate: @_shortDate( options.now )
 			contentType: _cType
 			contentDisposition: _cDisposition
-			contentLengthRange: options.contentLengthRange
+			contentLengthRange: options.contentLengthRange || @config.contentLengthRange
 
 		if options.redirectUrlTemplate?
 			_data.success_action_redirect = @_redirectUrl( options.redirectUrlTemplate, filename: filename )
@@ -157,9 +157,6 @@ class AwsS3Form extends require( "mpbasic" )()
 
 		if options.uuid?
 			data.fields[ "x-amz-meta-uuid" ] = options.uuid
-
-		if options.contentLengthRange?
-			data.fields["content-length-rage"] = options.contentLengthRange
 
 		if _cType?
 			data.fields[ "Content-Type" ] = _cType
