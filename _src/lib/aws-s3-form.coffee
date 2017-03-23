@@ -41,7 +41,7 @@ class AwsS3Form extends require( "mpbasic" )()
 			# **AwsS3Form.secretAccessKey** *String* AWS access secret
 			secretAccessKey: "set-in-config-json"
 			# **AwsS3Form.region** *String* AWS region
-			region: "eu-central-1"
+			region: "ap-northeast-2"
 			# **AwsS3Form.bucket** *String* AWS bucket name
 			bucket: null
 			# **AwsS3Form.secure** *Boolean* Define if the action uses ssl. `true` = "https"; `false` = "http"
@@ -60,6 +60,7 @@ class AwsS3Form extends require( "mpbasic" )()
 			useUuid: true
 			# **AwsS3Form.cryptoModule** *String( enum: crypto|crypto-js)* You can switch between the node internal crypo-module or the browser module [cryptojs](https://www.npmjs.com/package/crypto-js)
 			cryptoModule: "crypto"
+			contentLengthRange: 1024*1024
 
 	###
 	## initialize
@@ -119,6 +120,7 @@ class AwsS3Form extends require( "mpbasic" )()
 			amzdate: @_shortDate( options.now )
 			contentType: _cType
 			contentDisposition: _cDisposition
+			contentLengthRange: options.contentLengthRange
 
 		if options.redirectUrlTemplate?
 			_data.success_action_redirect = @_redirectUrl( options.redirectUrlTemplate, filename: filename )
@@ -155,6 +157,9 @@ class AwsS3Form extends require( "mpbasic" )()
 
 		if options.uuid?
 			data.fields[ "x-amz-meta-uuid" ] = options.uuid
+
+		if options.contentLengthRange?
+			data.fields["content-length-rage"] = options.contentLengthRange
 
 		if _cType?
 			data.fields[ "Content-Type" ] = _cType
@@ -195,8 +200,9 @@ class AwsS3Form extends require( "mpbasic" )()
 				{ "x-amz-credential": _predef.credential or @_createCredential( _date ) }
 				{ "x-amz-algorithm": "AWS4-HMAC-SHA256" }
 				{ "x-amz-date": _predef.amzdate or @_shortDate( _date ) }
+				["content-length-range", 0, options.contentLengthRange ]
 				#[ "starts-with", "$Content-Type", contentType ]
-				#["content-length-range", 0, @settings.maxFileSize ]
+				# ["content-length-range", 0, @settings.maxFileSize ]
 			]
 
 		if _predef.success_action_status?
