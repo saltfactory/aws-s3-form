@@ -48,6 +48,7 @@ class AwsS3Form extends require( "mpbasic" )()
 			secure: true
 			# **AwsS3Form.redirectUrlTemplate** *String|Function* a redirect url template.
 			redirectUrlTemplate: null
+			redirectUrl: null
 			# **AwsS3Form.redirectUrlTemplate** *Number* HTTP code to return when no redirectUrlTemplate is defined.
 			successActionStatus: 204
 			# **AwsS3Form.policyExpiration** *Date|Number* Add time in seconds to now to define the expiration of the policy. Or set a hard Date.
