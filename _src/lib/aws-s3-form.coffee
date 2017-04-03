@@ -122,8 +122,11 @@ class AwsS3Form extends require( "mpbasic" )()
 			contentDisposition: _cDisposition
 			contentLengthRange: options.contentLengthRange || @config.contentLengthRange
 
-		if options.redirectUrlTemplate?
-			_data.success_action_redirect = @_redirectUrl( options.redirectUrlTemplate, filename: filename )
+		if options.redirectUrlTemplate? || options.redirectUrl?
+			if options.redirectUrlTemplate?
+				_data.success_action_redirect = @_redirectUrl( options.redirectUrlTemplate, filename: filename )
+			else
+				_data.success_action_redirect = options.redirectUrl
 		else
 			if _isString( options.successActionStatus )
 				options.successActionStatus = parseInt( options.successActionStatus, 10 )
@@ -155,8 +158,11 @@ class AwsS3Form extends require( "mpbasic" )()
 				"Policy": _policyB64
 				"X-Amz-Signature": _signature.toString()
 
-		if options.redirectUrlTemplate?
-			data.fields.success_action_redirect = @_redirectUrl( options.redirectUrlTemplate, filename: filename )
+		if options.redirectUrlTemplate? || options.redirectUrl
+			if options.redirectUrlTemplate?
+				data.fields.success_action_redirect = @_redirectUrl( options.redirectUrlTemplate, filename: filename )
+			else
+				data.fields.success_action_redirect = options.redirectUrl
 		else
 			data.fields.success_action_status = @_successActionStatus( options.successActionStatus )
 
@@ -210,7 +216,11 @@ class AwsS3Form extends require( "mpbasic" )()
 		if _predef.success_action_status?
 			policy.conditions.push { "success_action_status": _predef.success_action_status.toString()}
 		else
-			policy.conditions.push { "success_action_redirect": _predef.success_action_redirect or @_redirectUrl( options.redirectUrlTemplate, filename: filename ) }
+			if options.redirectUrlTemplate?
+				policy.conditions.push { "success_action_redirect": _predef.success_action_redirect or @_redirectUrl( options.redirectUrlTemplate, filename: filename ) }
+			else
+				policy.conditions.push { "success_action_redirect": _predef.success_action_redirect or options.redirectUrl }
+			# policy.conditions.push { "success_action_redirect": _predef.success_action_redirect or @_redirectUrl( options.redirectUrlTemplate, filename: filename ) }
 
 		_ctypeCondition = false
 		if options.customConditions?
