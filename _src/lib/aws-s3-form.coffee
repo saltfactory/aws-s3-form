@@ -245,6 +245,9 @@ class AwsS3Form extends require( "mpbasic" )()
 		if not _ctypeCondition and _predef?.contentDisposition?
 			policy.conditions.push { "content-disposition": _predef.contentDisposition }
 
+		if options.serverSideEncryption?
+			policy.conditions.push { "x-amz-server-side-encryption": options.serverSideEncryption}
+
 
 		@debug "generated policy", policy
 		if options.uuid?
