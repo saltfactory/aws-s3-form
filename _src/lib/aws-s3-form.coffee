@@ -62,6 +62,7 @@ class AwsS3Form extends require( "mpbasic" )()
 			# **AwsS3Form.cryptoModule** *String( enum: crypto|crypto-js)* You can switch between the node internal crypo-module or the browser module [cryptojs](https://www.npmjs.com/package/crypto-js)
 			cryptoModule: "crypto"
 			contentLengthRange: 1024*1024
+			serverSideEncryption:null
 
 	###
 	## initialize
@@ -123,6 +124,9 @@ class AwsS3Form extends require( "mpbasic" )()
 			contentDisposition: _cDisposition
 			contentLengthRange: options.contentLengthRange || @config.contentLengthRange
 
+		if	options.serverSideEncryption?
+			_data["x-amz-server-side-encryption"] = options.serverSideEncryption
+
 		if options.redirectUrlTemplate? || options.redirectUrl?
 			if options.redirectUrlTemplate?
 				_data.success_action_redirect = @_redirectUrl( options.redirectUrlTemplate, filename: filename )
@@ -175,6 +179,9 @@ class AwsS3Form extends require( "mpbasic" )()
 
 		if _cDisposition?
 			data.fields["Content-Disposition"] = _cDisposition
+
+		if options.serverSideEncryption?
+			data.fields["x-amz-server-side-encryption"] = options.serverSideEncryption
 
 		return data
 
